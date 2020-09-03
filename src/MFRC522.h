@@ -301,7 +301,7 @@ public:
     void PCD_AntennaOff();
     byte PCD_GetAntennaGain();
     void PCD_SetAntennaGain(byte mask);
-    bool PCD_PerformSelfTest();
+    byte PCD_PerformSelfTest();
 
     /////////////////////////////////////////////////////////////////////////////////////
     // Power control functions

@@ -206,34 +206,24 @@ MFRC522::StatusCode MFRC522::PCD_CalculateCRC(byte *data,  ///< In: Pointer to t
  */
 void MFRC522::PCD_Init()
 {
-  bool hardReset = false;
 
   // Set the chipSelectPin as digital output, do not select the slave yet
   pinMode(_chipSelectPin, OUTPUT);
   digitalWrite(_chipSelectPin, HIGH);
 
-  // If a valid pin number has been set, pull device out of power down / reset state.
+  // If a valid pin number has been set, always hard reset the chip
   if (_resetPowerDownPin != UNUSED_PIN)
   {
-    // First set the resetPowerDownPin as digital input, to check the MFRC522 power down mode.
-    pinMode(_resetPowerDownPin, INPUT);
-
-    if (digitalRead(_resetPowerDownPin) == LOW)
-    {                                         // The MFRC522 chip is in power down mode.
-      pinMode(_resetPowerDownPin, OUTPUT);    // Now set the resetPowerDownPin as digital output.
-      digitalWrite(_resetPowerDownPin, LOW);  // Make sure we have a clean LOW state.
-      delayMicroseconds(2);                   // 8.8.1 Reset timing requirements says about 100ns. Let us be generous: 2μsl
-      digitalWrite(_resetPowerDownPin, HIGH); // Exit power down mode. This triggers a hard reset.
-      // Section 8.8.2 in the datasheet says the oscillator start-up time is the start up time of the crystal + 37,74μs. Let us be generous: 50ms.
-      delay(50);
-      hardReset = true;
-    }
+    pinMode(_resetPowerDownPin, OUTPUT);    // First set the resetPowerDownPin as digital output.
+    digitalWrite(_resetPowerDownPin, LOW);  // Make sure we have a clean LOW state.
+    delayMicroseconds(2);                   // 8.8.1 Reset timing requirements says about 100ns. Let us be generous: 2μs
+    digitalWrite(_resetPowerDownPin, HIGH); // Exit power down mode. This triggers a hard reset.
+    // Section 8.8.2 in the datasheet says the oscillator start-up time is the start up time of the crystal + 37,74μs. So 1ms should be fine
+    delay(1);
   }
 
-  if (!hardReset)
-  { // Perform a soft reset if we haven't triggered a hard reset above.
-    PCD_Reset();
-  }
+  // Perform a soft reset even though we've just triggered a hard reset above.
+  PCD_Reset();
 
   // Reset baud rates
   PCD_WriteRegister(TxModeReg, 0x00);
@@ -246,8 +236,8 @@ void MFRC522::PCD_Init()
   // TPrescaler_Hi are the four low bits in TModeReg. TPrescaler_Lo is TPrescalerReg.
   PCD_WriteRegister(TModeReg, 0x80);      // TAuto=1; timer starts automatically at the end of the transmission in all communication modes at all speeds
   PCD_WriteRegister(TPrescalerReg, 0xA9); // TPreScaler = TModeReg[3..0]:TPrescalerReg, ie 0x0A9 = 169 => f_timer=40kHz, ie a timer period of 25μs.
-  PCD_WriteRegister(TReloadRegH, 0x03);   // Reload timer with 0x3E8 = 1000, ie 25ms before timeout.
-  PCD_WriteRegister(TReloadRegL, 0xE8);
+  PCD_WriteRegister(TReloadRegH, 0x00);   // Reload timer with 0x0050 = 80, ie 2ms before timeout.
+  PCD_WriteRegister(TReloadRegL, 0x50);
 
   PCD_WriteRegister(TxASKReg, 0x40); // Default 0x00. Force a 100 % ASK modulation independent of the ModGsPReg register setting
   PCD_WriteRegister(ModeReg, 0x3D);  // Default 0x3F. Set the preset value for the CRC coprocessor for the CalcCRC command to 0x6363 (ISO 14443-3 part 6.2.4)
@@ -288,9 +278,9 @@ void MFRC522::PCD_Reset()
   uint8_t count = 0;
   do
   {
-    // Wait for the PowerDown bit in CommandReg to be cleared (max 3x50ms)
-    delay(50);
-  } while ((PCD_ReadRegister(CommandReg) & (1 << 4)) && (++count) < 3);
+    // Wait for the PowerDown bit in CommandReg to be cleared (max 5ms)
+    delay(1);
+  } while ((PCD_ReadRegister(CommandReg) & (1 << 4)) && (++count) < 5);
 } // End PCD_Reset()
 
 /**
@@ -346,7 +336,7 @@ void MFRC522::PCD_SetAntennaGain(byte mask)
  *
  * @return Whether or not the test passed. Or false if no firmware reference is available.
  */
-bool MFRC522::PCD_PerformSelfTest()
+byte MFRC522::PCD_PerformSelfTest()
 {
   // This follows directly the steps outlined in 16.1.1
   // 1. Perform a soft reset.
@@ -413,8 +403,12 @@ bool MFRC522::PCD_PerformSelfTest()
   case 0x92: // Version 2.0
     reference = MFRC522_firmware_referenceV2_0;
     break;
-  default:        // Unknown version
-    return false; // abort test
+  case 0x12: // Counterfeit chip
+    return 1;
+  case 0x00: // Disconnected
+    return 2;
+  default: // Unknown chip
+    return 3;
   }
 
   // Verify that the results match up to our expectations
@@ -422,12 +416,12 @@ bool MFRC522::PCD_PerformSelfTest()
   {
     if (result[i] != pgm_read_byte(&(reference[i])))
     {
-      return false;
+      return 4;
     }
   }
 
   // Test passed; all is good.
-  return true;
+  return 0;
 } // End PCD_PerformSelfTest()
 
 /////////////////////////////////////////////////////////////////////////////////////
