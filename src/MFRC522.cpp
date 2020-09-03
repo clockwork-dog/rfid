@@ -416,6 +416,7 @@ byte MFRC522::PCD_PerformSelfTest()
   {
     if (result[i] != pgm_read_byte(&(reference[i])))
     {
+      // There's an unexpected byte in the firmware CRC
       return 4;
     }
   }
