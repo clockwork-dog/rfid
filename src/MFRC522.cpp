@@ -406,6 +406,7 @@ byte MFRC522::PCD_PerformSelfTest()
   case 0x12: // Counterfeit chip
     return 1;
   case 0x00: // Disconnected
+  case 0xFF:
     return 2;
   default: // Unknown chip
     return 3;
