@@ -23,7 +23,7 @@
 #endif
 
 #ifndef SERIAL_PORT
-#define SERIAL_PORT Serial3
+#define SERIAL_PORT Serial
 #endif
 
 // Firmware data for self-test
