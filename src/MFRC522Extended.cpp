@@ -147,7 +147,7 @@ MFRC522::StatusCode MFRC522Extended::PICC_Select(Uid *uid,      ///< Pointer to 
       // Find out how many bits and bytes to send and receive.
       if (currentLevelKnownBits >= 32)
       { // All UID bits in this Cascade Level are known. This is a SELECT.
-        //Serial3.print("SELECT: currentLevelKnownBits="); Serial3.println(currentLevelKnownBits, DEC);
+        //SERIAL_PORT.print("SELECT: currentLevelKnownBits="); SERIAL_PORT.println(currentLevelKnownBits, DEC);
         buffer[1] = 0x70; // NVB - Number of Valid Bits: Seven whole bytes
         // Calculate BCC - Block Check Character
         buffer[6] = buffer[2] ^ buffer[3] ^ buffer[4] ^ buffer[5];
@@ -165,7 +165,7 @@ MFRC522::StatusCode MFRC522Extended::PICC_Select(Uid *uid,      ///< Pointer to 
       }
       else
       { // This is an ANTICOLLISION.
-        //Serial3.print("ANTICOLLISION: currentLevelKnownBits="); Serial3.println(currentLevelKnownBits, DEC);
+        //SERIAL_PORT.print("ANTICOLLISION: currentLevelKnownBits="); SERIAL_PORT.println(currentLevelKnownBits, DEC);
         txLastBits = currentLevelKnownBits % 8;
         count = currentLevelKnownBits / 8;     // Number of whole bytes in the UID part.
         index = 2 + count;                     // Number of whole bytes: SEL + NVB + UIDs
@@ -771,8 +771,8 @@ MFRC522::StatusCode MFRC522Extended::TCL_Transceive(PcbBlock *send, PcbBlock *ba
   byte rxModeReg = PCD_ReadRegister(TxModeReg);
   if ((rxModeReg & 0x80) != 0x80)
   {
-    Serial3.print("CRC is not taken care of by MFRC522: ");
-    Serial3.println(rxModeReg, HEX);
+    SERIAL_PORT.print("CRC is not taken care of by MFRC522: ");
+    SERIAL_PORT.println(rxModeReg, HEX);
 
     // Check the CRC
     // We need at least the CRC_A value.
@@ -1091,12 +1091,12 @@ void MFRC522Extended::PICC_DumpToSerial(TagInfo *tag)
   case PICC_TYPE_ISO_14443_4:
   case PICC_TYPE_MIFARE_DESFIRE:
     PICC_DumpISO14443_4(tag);
-    Serial3.println("Dumping memory contents not implemented for that PICC type.");
+    SERIAL_PORT.println("Dumping memory contents not implemented for that PICC type.");
     break;
   case PICC_TYPE_ISO_18092:
   case PICC_TYPE_MIFARE_PLUS:
   case PICC_TYPE_TNP3XXX:
-    Serial3.println("Dumping memory contents not implemented for that PICC type.");
+    SERIAL_PORT.println("Dumping memory contents not implemented for that PICC type.");
     break;
 
   case PICC_TYPE_UNKNOWN:
@@ -1105,7 +1105,7 @@ void MFRC522Extended::PICC_DumpToSerial(TagInfo *tag)
     break; // No memory dump here
   }
 
-  Serial3.println();
+  SERIAL_PORT.println();
   PICC_HaltA(); // Already done if it was a MIFARE Classic PICC.
 }
 
@@ -1116,38 +1116,38 @@ void MFRC522Extended::PICC_DumpDetailsToSerial(TagInfo *tag ///< Pointer to TagI
 )
 {
   // ATQA
-  Serial3.print("Card ATQA:");
+  SERIAL_PORT.print("Card ATQA:");
   if (((tag->atqa & 0xFF00u) >> 8) < 0x10)
-    Serial3.print(" 0");
-  Serial3.print((tag->atqa & 0xFF00u) >> 8, HEX);
+    SERIAL_PORT.print(" 0");
+  SERIAL_PORT.print((tag->atqa & 0xFF00u) >> 8, HEX);
   if ((tag->atqa & 0x00FFu) < 0x10)
-    Serial3.print("0");
+    SERIAL_PORT.print("0");
   else
-    Serial3.print(" ");
-  Serial3.println(tag->atqa & 0x00FFu, HEX);
+    SERIAL_PORT.print(" ");
+  SERIAL_PORT.println(tag->atqa & 0x00FFu, HEX);
 
   // UID
-  Serial3.print("Card UID:");
+  SERIAL_PORT.print("Card UID:");
   for (byte i = 0; i < tag->uid.size; i++)
   {
     if (tag->uid.uidByte[i] < 0x10)
-      Serial3.print(" 0");
+      SERIAL_PORT.print(" 0");
     else
-      Serial3.print(" ");
-    Serial3.print(tag->uid.uidByte[i], HEX);
+      SERIAL_PORT.print(" ");
+    SERIAL_PORT.print(tag->uid.uidByte[i], HEX);
   }
-  Serial3.println();
+  SERIAL_PORT.println();
 
   // SAK
-  Serial3.print("Card SAK: ");
+  SERIAL_PORT.print("Card SAK: ");
   if (tag->uid.sak < 0x10)
-    Serial3.print("0");
-  Serial3.println(tag->uid.sak, HEX);
+    SERIAL_PORT.print("0");
+  SERIAL_PORT.println(tag->uid.sak, HEX);
 
   // (suggested) PICC type
   PICC_Type piccType = PICC_GetType(tag);
-  Serial3.print("PICC type: ");
-  Serial3.println(PICC_GetTypeName(piccType));
+  SERIAL_PORT.print("PICC type: ");
+  SERIAL_PORT.println(PICC_GetTypeName(piccType));
 } // End PICC_DumpDetailsToSerial()
 
 /**
@@ -1158,16 +1158,16 @@ void MFRC522Extended::PICC_DumpISO14443_4(TagInfo *tag)
   // ATS
   if (tag->ats.size > 0x00)
   { // The first byte is the ATS length including the length byte
-    Serial3.print("Card ATS:");
+    SERIAL_PORT.print("Card ATS:");
     for (byte offset = 0; offset < tag->ats.size; offset++)
     {
       if (tag->ats.data[offset] < 0x10)
-        Serial3.print(" 0");
+        SERIAL_PORT.print(" 0");
       else
-        Serial3.print(" ");
-      Serial3.print(tag->ats.data[offset], HEX);
+        SERIAL_PORT.print(" ");
+      SERIAL_PORT.print(tag->ats.data[offset], HEX);
     }
-    Serial3.println();
+    SERIAL_PORT.println();
   }
 
 } // End PICC_DumpISO14443_4
