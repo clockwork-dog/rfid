@@ -13,7 +13,7 @@
 /**
  * Constructor.
  */
-MFRC522::MFRC522() : MFRC522(SS, UINT8_MAX)
+MFRC522::MFRC522() : MFRC522(SS, UNUSED_PIN, UNUSED_PIN)
 { // SS is defined in pins_arduino.h, UINT8_MAX means there is no connection from Arduino to MFRC522's reset and power down input
 } // End constructor
 
@@ -22,7 +22,7 @@ MFRC522::MFRC522() : MFRC522(SS, UINT8_MAX)
  * Prepares the output pins.
  */
 MFRC522::MFRC522(byte resetPowerDownPin ///< Arduino pin connected to MFRC522's reset and power down input (Pin 6, NRSTPD, active low). If there is no connection from the CPU to NRSTPD, set this to UINT8_MAX. In this case, only soft reset will be used in PCD_Init().
-                 ) : MFRC522(SS, resetPowerDownPin)
+                 ) : MFRC522(SS, resetPowerDownPin, UNUSED_PIN)
 { // SS is defined in pins_arduino.h
 } // End constructor
 
@@ -32,10 +32,21 @@ MFRC522::MFRC522(byte resetPowerDownPin ///< Arduino pin connected to MFRC522's 
  */
 MFRC522::MFRC522(byte chipSelectPin,    ///< Arduino pin connected to MFRC522's SPI slave select input (Pin 24, NSS, active low)
                  byte resetPowerDownPin ///< Arduino pin connected to MFRC522's reset and power down input (Pin 6, NRSTPD, active low). If there is no connection from the CPU to NRSTPD, set this to UINT8_MAX. In this case, only soft reset will be used in PCD_Init().
-)
+                 ) : MFRC522(chipSelectPin, resetPowerDownPin, UNUSED_PIN)
+{
+}
+
+/**
+ * Constructor.
+ * Prepares the output pins.
+ */
+MFRC522::MFRC522(byte chipSelectPin,     ///< Arduino pin connected to MFRC522's SPI slave select input (Pin 24, NSS, active low)
+                 byte resetPowerDownPin, ///< Arduino pin connected to MFRC522's reset and power down input (Pin 6, NRSTPD, active low). If there is no connection from the CPU to NRSTPD, set this to UINT8_MAX. In this case, only soft reset will be used in PCD_Init().
+                 byte allChipSelectPin)
 {
   _chipSelectPin = chipSelectPin;
   _resetPowerDownPin = resetPowerDownPin;
+  _allChipSelectPin = allChipSelectPin;
 } // End constructor
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -52,10 +63,13 @@ void MFRC522::PCD_WriteRegister(PCD_Register reg, ///< The register to write to.
 {
   SPI.beginTransaction(SPISettings(MFRC522_SPICLOCK, MSBFIRST, SPI_MODE0)); // Set the settings to work with SPI bus
   digitalWrite(_chipSelectPin, LOW);                                        // Select slave
+  digitalWrite(_allChipSelectPin, LOW);                                     // digitalWrite routine checks if this is a valid pin, so no need to check if it's UNUSED_PIN
+  delayMicroseconds(MFRC522_SPI_SS_PROPAGATION_DELAY);                      // For RC filter propagation delay
   SPI.transfer(reg);                                                        // MSB == 0 is for writing. LSB is not used in address. Datasheet section 8.1.2.3.
   SPI.transfer(value);
-  digitalWrite(_chipSelectPin, HIGH); // Release slave again
-  SPI.endTransaction();               // Stop using the SPI bus
+  digitalWrite(_chipSelectPin, HIGH);    // Release slave again
+  digitalWrite(_allChipSelectPin, HIGH); // digitalWrite routine checks if this is a valid pin, so no need to check if it's UNUSED_PIN
+  SPI.endTransaction();                  // Stop using the SPI bus
 } // End PCD_WriteRegister()
 
 /**
@@ -69,13 +83,16 @@ void MFRC522::PCD_WriteRegister(PCD_Register reg, ///< The register to write to.
 {
   SPI.beginTransaction(SPISettings(MFRC522_SPICLOCK, MSBFIRST, SPI_MODE0)); // Set the settings to work with SPI bus
   digitalWrite(_chipSelectPin, LOW);                                        // Select slave
+  digitalWrite(_allChipSelectPin, LOW);                                     // digitalWrite routine checks if this is a valid pin, so no need to check if it's UNUSED_PIN
+  delayMicroseconds(MFRC522_SPI_SS_PROPAGATION_DELAY);                      // For RC filter propagation delay
   SPI.transfer(reg);                                                        // MSB == 0 is for writing. LSB is not used in address. Datasheet section 8.1.2.3.
   for (byte index = 0; index < count; index++)
   {
     SPI.transfer(values[index]);
   }
-  digitalWrite(_chipSelectPin, HIGH); // Release slave again
-  SPI.endTransaction();               // Stop using the SPI bus
+  digitalWrite(_chipSelectPin, HIGH);    // Release slave again
+  digitalWrite(_allChipSelectPin, HIGH); // digitalWrite routine checks if this is a valid pin, so no need to check if it's UNUSED_PIN
+  SPI.endTransaction();                  // Stop using the SPI bus
 } // End PCD_WriteRegister()
 
 /**
@@ -88,9 +105,12 @@ byte MFRC522::PCD_ReadRegister(PCD_Register reg ///< The register to read from. 
   byte value;
   SPI.beginTransaction(SPISettings(MFRC522_SPICLOCK, MSBFIRST, SPI_MODE0)); // Set the settings to work with SPI bus
   digitalWrite(_chipSelectPin, LOW);                                        // Select slave
+  digitalWrite(_allChipSelectPin, LOW);                                     // digitalWrite routine checks if this is a valid pin, so no need to check if it's UNUSED_PIN
+  delayMicroseconds(MFRC522_SPI_SS_PROPAGATION_DELAY);                      // For RC filter propagation delay
   SPI.transfer(0x80 | reg);                                                 // MSB == 1 is for reading. LSB is not used in address. Datasheet section 8.1.2.3.
   value = SPI.transfer(0);                                                  // Read the value back. Send 0 to stop reading.
   digitalWrite(_chipSelectPin, HIGH);                                       // Release slave again
+  digitalWrite(_allChipSelectPin, HIGH);                                    // digitalWrite routine checks if this is a valid pin, so no need to check if it's UNUSED_PIN
   SPI.endTransaction();                                                     // Stop using the SPI bus
   return value;
 } // End PCD_ReadRegister()
@@ -114,6 +134,8 @@ void MFRC522::PCD_ReadRegister(PCD_Register reg, ///< The register to read from.
   byte index = 0;                                                           // Index in values array.
   SPI.beginTransaction(SPISettings(MFRC522_SPICLOCK, MSBFIRST, SPI_MODE0)); // Set the settings to work with SPI bus
   digitalWrite(_chipSelectPin, LOW);                                        // Select slave
+  digitalWrite(_allChipSelectPin, LOW);                                     // digitalWrite routine checks if this is a valid pin, so no need to check if it's UNUSED_PIN
+  delayMicroseconds(MFRC522_SPI_SS_PROPAGATION_DELAY);                      // For RC filter propagation delay
   count--;                                                                  // One read is performed outside of the loop
   SPI.transfer(address);                                                    // Tell MFRC522 which address we want to read
   if (rxAlign)
@@ -131,9 +153,10 @@ void MFRC522::PCD_ReadRegister(PCD_Register reg, ///< The register to read from.
     values[index] = SPI.transfer(address); // Read value and tell that we want to read the same address again.
     index++;
   }
-  values[index] = SPI.transfer(0);    // Read the final byte. Send 0 to stop reading.
-  digitalWrite(_chipSelectPin, HIGH); // Release slave again
-  SPI.endTransaction();               // Stop using the SPI bus
+  values[index] = SPI.transfer(0);       // Read the final byte. Send 0 to stop reading.
+  digitalWrite(_chipSelectPin, HIGH);    // Release slave again
+  digitalWrite(_allChipSelectPin, HIGH); // digitalWrite routine checks if this is a valid pin, so no need to check if it's UNUSED_PIN
+  SPI.endTransaction();                  // Stop using the SPI bus
 } // End PCD_ReadRegister()
 
 /**
@@ -209,15 +232,18 @@ void MFRC522::PCD_Init()
 
   // Set the chipSelectPin as digital output, do not select the slave yet
   pinMode(_chipSelectPin, OUTPUT);
+  pinMode(_allChipSelectPin, OUTPUT); // pinMode routine checks if this is a valid pin, so no need to check if it's UNUSED_PIN
   digitalWrite(_chipSelectPin, HIGH);
+  digitalWrite(_allChipSelectPin, HIGH);               // digitalWrite routine checks if this is a valid pin, so no need to check if it's UNUSED_PIN
+  delayMicroseconds(MFRC522_SPI_SS_PROPAGATION_DELAY); // For RC filter propagation delay
 
   // If a valid pin number has been set, always hard reset the chip
   if (_resetPowerDownPin != UNUSED_PIN)
   {
-    pinMode(_resetPowerDownPin, OUTPUT);    // First set the resetPowerDownPin as digital output.
-    digitalWrite(_resetPowerDownPin, LOW);  // Make sure we have a clean LOW state.
-    delayMicroseconds(2);                   // 8.8.1 Reset timing requirements says about 100ns. Let us be generous: 2μs
-    digitalWrite(_resetPowerDownPin, HIGH); // Exit power down mode. This triggers a hard reset.
+    pinMode(_resetPowerDownPin, OUTPUT);                // First set the resetPowerDownPin as digital output.
+    digitalWrite(_resetPowerDownPin, LOW);              // Make sure we have a clean LOW state.
+    delayMicroseconds(MFRC522_RESET_PROPAGATION_DELAY); // 8.8.1 Reset timing requirements says about 100ns, but we've got RC propagation delay on the protected reset line
+    digitalWrite(_resetPowerDownPin, HIGH);             // Exit power down mode. This triggers a hard reset.
     // Section 8.8.2 in the datasheet says the oscillator start-up time is the start up time of the crystal + 37,74μs. So 1ms should be fine
     delay(1);
   }
@@ -262,6 +288,20 @@ void MFRC522::PCD_Init(byte chipSelectPin,    ///< Arduino pin connected to MFRC
 {
   _chipSelectPin = chipSelectPin;
   _resetPowerDownPin = resetPowerDownPin;
+  // Set the chipSelectPin as digital output, do not select the slave yet
+  PCD_Init();
+} // End PCD_Init()
+
+/**
+ * Initializes the MFRC522 chip.
+ */
+void MFRC522::PCD_Init(byte chipSelectPin,     ///< Arduino pin connected to MFRC522's SPI slave select input (Pin 24, NSS, active low)
+                       byte resetPowerDownPin, ///< Arduino pin connected to MFRC522's reset and power down input (Pin 6, NRSTPD, active low)
+                       byte allChipSelectPin)
+{
+  _chipSelectPin = chipSelectPin;
+  _resetPowerDownPin = resetPowerDownPin;
+  _allChipSelectPin = allChipSelectPin;
   // Set the chipSelectPin as digital output, do not select the slave yet
   PCD_Init();
 } // End PCD_Init()

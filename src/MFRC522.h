@@ -22,6 +22,14 @@
 #define MFRC522_SPICLOCK SPI_CLOCK_DIV4 // MFRC522 accept upto 10MHz
 #endif
 
+#ifndef MFRC522_SPI_SS_PROPAGATION_DELAY
+#define MFRC522_SPI_SS_PROPAGATION_DELAY 5
+#endif
+
+#ifndef MFRC522_RESET_PROPAGATION_DELAY
+#define MFRC522_RESET_PROPAGATION_DELAY 20
+#endif
+
 #ifndef SERIAL_PORT
 #define SERIAL_PORT Serial
 #endif
@@ -282,6 +290,7 @@ public:
   MFRC522();
   MFRC522(byte resetPowerDownPin);
   MFRC522(byte chipSelectPin, byte resetPowerDownPin);
+  MFRC522(byte chipSelectPin, byte resetPowerDownPin, byte allChipSelectPin);
 
   /////////////////////////////////////////////////////////////////////////////////////
   // Basic interface functions for communicating with the MFRC522
@@ -300,6 +309,7 @@ public:
   void PCD_Init();
   void PCD_Init(byte resetPowerDownPin);
   void PCD_Init(byte chipSelectPin, byte resetPowerDownPin);
+  void PCD_Init(byte chipSelectPin, byte resetPowerDownPin, byte allChipSelectPin);
   void PCD_Reset();
   void PCD_AntennaOn();
   void PCD_AntennaOff();
@@ -373,8 +383,9 @@ public:
   virtual bool PICC_ReadCardSerial();
 
 protected:
-  byte _chipSelectPin;     // Arduino pin connected to MFRC522's SPI slave select input (Pin 24, NSS, active low)
+  byte _chipSelectPin;     // Arduino pin connected to MFRC522's SPI chip select input (Pin 24, NSS, active low)
   byte _resetPowerDownPin; // Arduino pin connected to MFRC522's reset and power down input (Pin 6, NRSTPD, active low)
+  byte _allChipSelectPin;  // Arduino pin connected to set any MFRC522's chip select - in addition to chip select pin above
   StatusCode MIFARE_TwoStepHelper(byte command, byte blockAddr, int32_t data);
 };
 
