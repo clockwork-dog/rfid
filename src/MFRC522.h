@@ -19,7 +19,7 @@
 #include <SPI.h>
 
 #ifndef MFRC522_SPICLOCK
-#define MFRC522_SPICLOCK SPI_CLOCK_DIV4 // MFRC522 accept upto 10MHz
+#define MFRC522_SPICLOCK (4000000u) // MFRC522 accept upto 10MHz, set to 4MHz.
 #endif
 
 #ifndef MFRC522_SPI_SS_PROPAGATION_DELAY

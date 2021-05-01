@@ -1548,6 +1548,7 @@ const char *MFRC522::PICC_GetTypeName(PICC_Type piccType ///< One of the PICC_Ty
  */
 void MFRC522::PCD_DumpVersionToSerial()
 {
+#if DEBUGLEVEL > 1
   // Get the MFRC522 firmware version
   byte v = PCD_ReadRegister(VersionReg);
   SERIAL_PORT.print("Firmware Version: 0x");
@@ -1576,6 +1577,7 @@ void MFRC522::PCD_DumpVersionToSerial()
   // When 0x00 or 0xFF is returned, communication probably failed
   if ((v == 0x00) || (v == 0xFF))
     SERIAL_PORT.println("WARNING: Communication failure, is the MFRC522 properly connected?");
+#endif
 } // End PCD_DumpVersionToSerial()
 
 /**
@@ -1586,6 +1588,7 @@ void MFRC522::PCD_DumpVersionToSerial()
 void MFRC522::PICC_DumpToSerial(Uid *uid ///< Pointer to Uid struct returned from a successful PICC_Select().
 )
 {
+#if DEBUGLEVEL > 1
   MIFARE_Key key;
 
   // Dump UID, SAK and Type
@@ -1626,6 +1629,7 @@ void MFRC522::PICC_DumpToSerial(Uid *uid ///< Pointer to Uid struct returned fro
 
   SERIAL_PORT.println();
   PICC_HaltA(); // Already done if it was a MIFARE Classic PICC.
+#endif
 } // End PICC_DumpToSerial()
 
 /**
@@ -1634,6 +1638,7 @@ void MFRC522::PICC_DumpToSerial(Uid *uid ///< Pointer to Uid struct returned fro
 void MFRC522::PICC_DumpDetailsToSerial(Uid *uid ///< Pointer to Uid struct returned from a successful PICC_Select().
 )
 {
+#if DEBUGLEVEL > 1
   // UID
   SERIAL_PORT.print("Card UID:");
   for (byte i = 0; i < uid->size; i++)
@@ -1656,6 +1661,7 @@ void MFRC522::PICC_DumpDetailsToSerial(Uid *uid ///< Pointer to Uid struct retur
   PICC_Type piccType = PICC_GetType(uid->sak);
   SERIAL_PORT.print("PICC type: ");
   SERIAL_PORT.println(PICC_GetTypeName(piccType));
+#endif
 } // End PICC_DumpDetailsToSerial()
 
 /**
@@ -1667,6 +1673,7 @@ void MFRC522::PICC_DumpMifareClassicToSerial(Uid *uid,           ///< Pointer to
                                              MIFARE_Key *key     ///< Key A used for all sectors.
 )
 {
+#if DEBUGLEVEL > 1
   byte no_of_sectors = 0;
   switch (piccType)
   {
@@ -1700,6 +1707,7 @@ void MFRC522::PICC_DumpMifareClassicToSerial(Uid *uid,           ///< Pointer to
   }
   PICC_HaltA(); // Halt the PICC before stopping the encrypted session.
   PCD_StopCrypto1();
+#endif
 } // End PICC_DumpMifareClassicToSerial()
 
 /**
@@ -1712,6 +1720,7 @@ void MFRC522::PICC_DumpMifareClassicSectorToSerial(Uid *uid,        ///< Pointer
                                                    byte sector      ///< The sector to dump, 0..39.
 )
 {
+#if DEBUGLEVEL > 1
   MFRC522::StatusCode status;
   byte firstBlock;      // Address of lowest address to dump actually last block dumped)
   byte no_of_blocks;    // Number of blocks in sector
@@ -1873,6 +1882,7 @@ void MFRC522::PICC_DumpMifareClassicSectorToSerial(Uid *uid,        ///< Pointer
   }
 
   return;
+#endif
 } // End PICC_DumpMifareClassicSectorToSerial()
 
 /**
@@ -1880,6 +1890,7 @@ void MFRC522::PICC_DumpMifareClassicSectorToSerial(Uid *uid,        ///< Pointer
  */
 void MFRC522::PICC_DumpMifareUltralightToSerial()
 {
+#if DEBUGLEVEL > 1
   MFRC522::StatusCode status;
   byte byteCount;
   byte buffer[18];
@@ -1920,6 +1931,7 @@ void MFRC522::PICC_DumpMifareUltralightToSerial()
       SERIAL_PORT.println();
     }
   }
+#endif
 } // End PICC_DumpMifareUltralightToSerial()
 
 /**
@@ -1968,20 +1980,23 @@ bool MFRC522::MIFARE_OpenUidBackdoor(bool logErrors)
   byte validBits = 7; /* Our command is only 7 bits. After receiving card response,
 						  this will contain amount of valid response bits. */
   byte response[32];  // Card's response is written here
-  byte received;
+  byte received = sizeof(response);
   MFRC522::StatusCode status = PCD_TransceiveData(&cmd, (byte)1, response, &received, &validBits, (byte)0, false); // 40
   if (status != STATUS_OK)
   {
+#if DEBUGLEVEL > 1
     if (logErrors)
     {
       SERIAL_PORT.println("Card did not respond to 0x40 after HALT command. Are you sure it is a UID changeable one?");
       SERIAL_PORT.print("Error name: ");
       SERIAL_PORT.println(GetStatusCodeName(status));
     }
+#endif
     return false;
   }
   if (received != 1 || response[0] != 0x0A)
   {
+#if DEBUGLEVEL > 1
     if (logErrors)
     {
       SERIAL_PORT.print("Got bad response on backdoor 0x40 command: ");
@@ -1990,6 +2005,7 @@ bool MFRC522::MIFARE_OpenUidBackdoor(bool logErrors)
       SERIAL_PORT.print(validBits);
       SERIAL_PORT.print(" valid bits)\r\n");
     }
+#endif
     return false;
   }
 
@@ -1998,16 +2014,19 @@ bool MFRC522::MIFARE_OpenUidBackdoor(bool logErrors)
   status = PCD_TransceiveData(&cmd, (byte)1, response, &received, &validBits, (byte)0, false); // 43
   if (status != STATUS_OK)
   {
+#if DEBUGLEVEL > 1
     if (logErrors)
     {
       SERIAL_PORT.println("Error in communication at command 0x43, after successfully executing 0x40");
       SERIAL_PORT.print("Error name: ");
       SERIAL_PORT.println(GetStatusCodeName(status));
     }
+#endif
     return false;
   }
   if (received != 1 || response[0] != 0x0A)
   {
+#if DEBUGLEVEL > 1
     if (logErrors)
     {
       SERIAL_PORT.print("Got bad response on backdoor 0x43 command: ");
@@ -2016,6 +2035,7 @@ bool MFRC522::MIFARE_OpenUidBackdoor(bool logErrors)
       SERIAL_PORT.print(validBits);
       SERIAL_PORT.print(" valid bits)\r\n");
     }
+#endif
     return false;
   }
 
@@ -2037,10 +2057,12 @@ bool MFRC522::MIFARE_SetUid(byte *newUid, byte uidSize, bool logErrors)
   // UID + BCC byte can not be larger than 16 together
   if (!newUid || !uidSize || uidSize > 15)
   {
+#if DEBUGLEVEL > 1
     if (logErrors)
     {
       SERIAL_PORT.println("New UID buffer empty, size 0, or size > 15 given");
     }
+#endif
     return false;
   }
 
@@ -2061,29 +2083,35 @@ bool MFRC522::MIFARE_SetUid(byte *newUid, byte uidSize, bool logErrors)
 
       if (!PICC_IsNewCardPresent() || !PICC_ReadCardSerial())
       {
+#if DEBUGLEVEL > 1
         SERIAL_PORT.println("No card was previously selected, and none are available. Failed to set UID.");
+#endif
         return false;
       }
 
       status = PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, (byte)1, &key, &uid);
       if (status != STATUS_OK)
       {
-        // We tried, time to give up
+// We tried, time to give up
+#if DEBUGLEVEL > 1
         if (logErrors)
         {
           SERIAL_PORT.println("Failed to authenticate to card for reading, could not set UID: ");
           SERIAL_PORT.println(GetStatusCodeName(status));
         }
+#endif
         return false;
       }
     }
     else
     {
+#if DEBUGLEVEL > 1
       if (logErrors)
       {
         SERIAL_PORT.print("PCD_Authenticate() failed: ");
         SERIAL_PORT.println(GetStatusCodeName(status));
       }
+#endif
       return false;
     }
   }
@@ -2094,12 +2122,14 @@ bool MFRC522::MIFARE_SetUid(byte *newUid, byte uidSize, bool logErrors)
   status = MIFARE_Read((byte)0, block0_buffer, &byteCount);
   if (status != STATUS_OK)
   {
+#if DEBUGLEVEL > 1
     if (logErrors)
     {
       SERIAL_PORT.print("MIFARE_Read() failed: ");
       SERIAL_PORT.println(GetStatusCodeName(status));
       SERIAL_PORT.println("Are you sure your KEY A for sector 0 is 0xFFFFFFFFFFFF?");
     }
+#endif
     return false;
   }
 
@@ -2120,10 +2150,12 @@ bool MFRC522::MIFARE_SetUid(byte *newUid, byte uidSize, bool logErrors)
   // Activate UID backdoor
   if (!MIFARE_OpenUidBackdoor(logErrors))
   {
+#if DEBUGLEVEL > 1
     if (logErrors)
     {
       SERIAL_PORT.println("Activating the UID backdoor failed.");
     }
+#endif
     return false;
   }
 
@@ -2131,11 +2163,13 @@ bool MFRC522::MIFARE_SetUid(byte *newUid, byte uidSize, bool logErrors)
   status = MIFARE_Write((byte)0, block0_buffer, (byte)16);
   if (status != STATUS_OK)
   {
+#if DEBUGLEVEL > 1
     if (logErrors)
     {
       SERIAL_PORT.print("MIFARE_Write() failed: ");
       SERIAL_PORT.println(GetStatusCodeName(status));
     }
+#endif
     return false;
   }
 
@@ -2160,11 +2194,13 @@ bool MFRC522::MIFARE_UnbrickUidSector(bool logErrors)
   MFRC522::StatusCode status = MIFARE_Write((byte)0, block0_buffer, (byte)16);
   if (status != STATUS_OK)
   {
+#if DEBUGLEVEL > 1
     if (logErrors)
     {
       SERIAL_PORT.print("MIFARE_Write() failed: ");
       SERIAL_PORT.println(GetStatusCodeName(status));
     }
+#endif
     return false;
   }
   return true;
