@@ -30,6 +30,10 @@
 #define MFRC522_RESET_PROPAGATION_DELAY 20
 #endif
 
+#ifndef MFRC522_ANTENNA_GAIN_DELAY
+#define MFRC522_ANTENNA_GAIN_DELAY 700
+#endif
+
 #ifndef SERIAL_PORT
 #define SERIAL_PORT Serial
 #endif

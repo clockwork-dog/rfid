@@ -367,6 +367,7 @@ void MFRC522::PCD_SetAntennaGain(byte mask)
   {                                                       // only bother if there is a change
     PCD_ClearRegisterBitMask(RFCfgReg, (0x07 << 4));      // clear needed to allow 000 pattern
     PCD_SetRegisterBitMask(RFCfgReg, mask & (0x07 << 4)); // only set RxGain[2:0] bits
+    delayMicroseconds(MFRC522_ANTENNA_GAIN_DELAY);
   }
 } // End PCD_SetAntennaGain()
 
